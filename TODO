@@ -8,3 +8,4 @@
   + persona based ones for kb integration with your existing agents
 - convert to MCP tool call for my discord bois
 - transcript could use better sentence boundary checks before chuking and stitching
+- oh yeah and whisper throws a warning about how i structure the request, AND I need to add memoory batching and limiting with a config

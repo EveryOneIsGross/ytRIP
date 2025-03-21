@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![alt text](assests/spooky.gif)
+![alt text](assets/spooky.gif)
 
 </div>
 
