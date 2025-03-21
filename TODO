@@ -1,0 +1,9 @@
+- add more api endpoints
+- refactor logging and terminal to use rich and panels
+- focus on how to ensure multi turn temporal context through clean prompting techniques which I haven't quite nailed yet with smol models...
+- expand frame anaylsis and prompt templates to use different high order abstractions, similar to the current stage instruction ones.
+  + robust general OCR, no poetics, just raw and factual image processing
+  + one that focuses on emotional content, gestures and facial queues
+  + one for processing slides and lecture content
+  + persona based ones for kb integration with your existing agents
+- convert to MCP tool call for my discord bois
