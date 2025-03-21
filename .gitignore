@@ -1,6 +1,9 @@
 .cursor
+.cursorrules
+
 /archive
 .env
 /output
 /youtubelinkz
-/_pycache_
+/__pycache__
+
