@@ -1,5 +1,11 @@
 # YouTube Video Processor
 
+<div align="center">
+
+![alt text](assests/spooky.gif)
+
+</div>
+
 A Python tool for downloading, transcribing, and analyzing YouTube videos.
 
 ## Features
