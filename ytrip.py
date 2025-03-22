@@ -15,7 +15,7 @@ from colorama import Fore, Style, init
 import yaml
 import logging.handlers
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Core processing libraries
 import torch
@@ -75,69 +75,36 @@ class Message(BaseModel):
     images: Optional[List[str]] = Field(None, description="List of image paths (for Ollama API)")
 
 class FrameDescription(BaseModel):
-    """Complete analysis of a video frame using theatrical stage direction concepts"""
+    """Frame analysis using theatrical direction concepts"""
     
-    # Required fields (minimal set)
-    scene_description: str = Field("", description="Write a complete stage direction paragraph that integrates all elements into a cohesive description.")
-    location: str = Field("", description="Describe the setting using theatrical terms.")
+    # Core elements (required)
+    scene_description: str = Field("", description="Complete stage direction paragraph integrating all elements")
+    location: str = Field("", description="Setting in theatrical terms")
     
-    # Optional fields with proper typing
-    time_of_day: Optional[str] = Field(None, description="Note the apparent time of day if discernible.")
+    # Scene context
+    time_of_day: Optional[str] = Field(None)
+    atmosphere: Optional[str] = Field(None, description="Overall emotional tone/mood")
     
-    # Character Elements 
-    characters: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="List all visible characters with details about their appearance, positioning, and demeanor.")
-    ocr_text: Optional[str] = Field(None, description="Extract any text from the image.")
-    ocr_charts: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Extract any charts from the image.")
+    # Character and action elements
+    characters: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Characters with appearance, position, emotion")
+    actions: Optional[List[str]] = Field(default_factory=list, description="Key physical actions and movements")
     
-    # Movement and Blocking
-    movements: Optional[List[str]] = Field(default_factory=list, description="Describe significant character movements within the frame. (e.g., 'PERSON crosses to downstage left.')")
-    positions: Optional[Dict[str, str]] = Field(default_factory=dict, description="Map character positions using theatrical terms (upstage, downstage, stage left, stage right, center).")
-    
-    # Physical Actions
-    actions: Optional[List[str]] = Field(default_factory=list, description="List physical actions being performed by characters. (e.g., 'picks up book', 'sits on couch')")
-    gestures: Optional[List[str]] = Field(default_factory=list, description="Note specific gestures or expressions that convey meaning. (e.g., 'raises eyebrow skeptically')")
-    
-    # Emotional Elements
-    emotional_states: Optional[Dict[str, str]] = Field(default_factory=dict, description="Identify the emotional state of each character, keyed by character name.")
-    atmosphere: Optional[str] = Field(None, description="Describe the overall emotional atmosphere or mood of the scene.")
-    
-    # Technical Elements
-    graphics: Optional[List[str]] = Field(default_factory=list, description="List any apparent graphics, slides, text, or visual elements that are present in the frame.")
-    props: Optional[List[Dict[str, Any]]] = Field(default_factory=list, description="Identify important props and how they're being used.")
-    
-    # Visual Composition
-    framing: Optional[str] = Field(None, description="Describe how the visual elements are framed within the scene.")
-    focus: Optional[str] = Field(None, description="Identify where the viewer's attention is directed and why.")
-
-    # Scene Structure
-    scene_description: str = Field("", description="Write a complete stage direction paragraph that integrates all elements into a cohesive description. This should read like a professional stage direction from a play script.")
-    scene_transitions: Optional[str] = Field(None, description="Note how this moment transitions from the previous scene or frame.")
-
+    # Visual elements
+    visuals: Optional[Dict[str, Any]] = Field(default_factory=dict, description="Technical elements including graphics, props, framing")
+    ocr_text: Optional[str] = Field(None, description="Text visible in frame")
 
     @classmethod
     def error_state(cls, error_msg: str) -> Dict[str, Any]:
         """Generate a consistent error state for failed analysis"""
         return {
-            # Required fields with default values
             "scene_description": f"Error processing image: {error_msg}",
             "location": "Error",
-            
-            # Optional fields with None or empty collections
             "time_of_day": None,
-            "characters": [],
-            "ocr_text": None,
-            "ocr_charts": [],
-            "movements": [],
-            "positions": {},
-            "actions": [],
-            "gestures": [],
-            "emotional_states": {},
             "atmosphere": None,
-            "graphics": [],
-            "props": [],
-            "framing": None,
-            "focus": None,
-            "scene_transitions": None
+            "characters": [],
+            "actions": [],
+            "visuals": {},
+            "ocr_text": None
         }
 
 class FrameAnalysis(FrameDescription):
@@ -271,6 +238,14 @@ class PromptManager:
         except Exception as e:
             logging.warning(f"Failed to load config from {config_path}: {e}")
             return {}
+            
+    def truncate_middle(self, text: str, max_length: int = 128) -> str:
+        if not text or len(text) <= max_length:
+            return text
+        
+        # Keep equal parts from start and end
+        half_length = (max_length - 3) // 2
+        return f"{text[:half_length]}...{text[-(max_length - half_length - 3):]}"
 
     def get_frame_prompt(self, frame_info: Dict[str, Any], 
                         video_title: str, 
@@ -278,6 +253,11 @@ class PromptManager:
                         surrounding_transcript: str = None,
                         video_description: str = None) -> str:
         content_template = self.config.get('content_string', self.default_content_string)
+        
+        # Truncate long descriptions
+        max_length = self.config.get('max_description_length', 128)
+        if video_description:
+            video_description = self.truncate_middle(video_description, max_length)
         
         return content_template.format(
             video_title=video_title,
